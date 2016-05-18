@@ -118,10 +118,35 @@ float disp_z;
 	vec3 camPos = viewModel[3].xyz;
 
 	// Step 1: Transform normal coordinates into coordinates as if they were on a sphere
-	float radius = PLANET_RADIUS * BS * 16 + pos.y;
 	float xangle = (pos.x - camPos.x) / (PLANET_RADIUS * BS * 16);
 	float zangle = (pos.z - camPos.z) / (PLANET_RADIUS * BS * 16);
 	float distangle = pow(xangle * xangle + zangle * zangle, 0.5);
+
+#ifdef PLANET_KEEP_SCALE
+	/*
+	 * The width of nodes increases with increasing height, which means
+	 * that nodes need to be scaled in their height if we want to make it
+	 * so that the nodes always look like they're normally shaped.
+	 *  With the intercept theorem we get width(x) = (r + camPos.y + x) / r,
+	 * with r = PLANET_RADIUS * BS * MAP_BLOCKSIZE
+	 * and x being the block's visual (not physical!) height above the camera.
+	 * In order to completely and accurately scale all the nodes, we need
+	 * to solve the differential equation x'(p) = q = (r + camPos.y + x(p)) / r
+	 * with p being the physical height of the node above the camera. Obviously
+	 * the visual height is zero if the physical height is zero, so x(0) = 0.
+	 * We get the solution x(p) = (exp(p / r  - 1))*(r + camPos.y)
+	 * If we set p = h = pos.y - camPos.y (distance from camera y to vertex y)
+	 * we get the visual height of the vertex above the camera which is
+	 * x(h) = (exp(h / r  - 1)) * (r + camPos.y) and because the camera is obviously
+	 * at height rcam = r + camPos.y (since y=0 is at radius of planet), for the
+	 * total radius of the vertex we get radius = rcam + x(h) = (camPos.y + r) * exp(h / r)
+	 */
+	float r = PLANET_RADIUS * BS * 16;
+	float h = pos.y - camPos.y;
+	float radius = (camPos.y + r) * exp(h / r);
+#else
+	float radius = PLANET_RADIUS * BS * 16 + pos.y;
+#endif
 
 	// Step 2: Transform back from spherical coordinates to cartesian system with
 	// the center of the planet in the origin of the coordinate system.
@@ -130,10 +155,11 @@ float disp_z;
 	float planet_y = cos(distangle) * radius;
 
 	// Step 3: Translate coordinates so that they are relative to the camera, not the planet center
-	// The planet center is *always* position PLANET_RADIUS underneath the player
+	// The planet center is *always* positioned underneath the player
 	pos.y = planet_y - (PLANET_RADIUS * BS * 16);
 	pos.x = camPos.x + planet_x;
 	pos.z = camPos.z + planet_z;
+	
 #endif
 
 #if (MATERIAL_TYPE == TILE_MATERIAL_LIQUID_TRANSPARENT || MATERIAL_TYPE == TILE_MATERIAL_LIQUID_OPAQUE) && ENABLE_WAVING_WATER

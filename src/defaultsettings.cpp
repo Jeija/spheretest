@@ -320,9 +320,10 @@ void set_default_settings(Settings *settings)
 	settings->setDefault("chunksize", "5");
 	settings->setDefault("mg_flags", "dungeons");
 
-	// planet
+	// Planet
 	settings->setDefault("planet_enable", "false");
 	settings->setDefault("planet_radius", "30");
+	settings->setDefault("planet_keep_scale", "true");
 
 	// IPv6
 	settings->setDefault("enable_ipv6", "true");

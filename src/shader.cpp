@@ -770,6 +770,9 @@ ShaderInfo generate_shader(std::string name, u8 material_type, u8 drawtype,
 	if (g_settings->getBool("planet_enable"))
 		shaders_header += "#define ENABLE_PLANET\n";
 
+	if (g_settings->getBool("planet_keep_scale"))
+		shaders_header += "#define PLANET_KEEP_SCALE\n";
+
 	shaders_header += "#define PLANET_RADIUS " + to_string(g_settings->getU16("planet_radius")) + "\n";
 
 	// Call addHighLevelShaderMaterial() or addShaderMaterial()
