@@ -1033,7 +1033,8 @@ MapBlockMesh::MapBlockMesh(MeshMakeData *data, v3s16 camera_offset):
 	m_last_crack(-1),
 	m_crack_materials(),
 	m_last_daynight_ratio((u32) -1),
-	m_daynight_diffs()
+	m_daynight_diffs(),
+	m_planet_offset(v3s16(0, 0, 0))
 {
 	m_enable_shaders = data->m_use_shaders;
 	m_use_tangent_vertices = data->m_use_tangent_vertices;
@@ -1398,6 +1399,15 @@ void MapBlockMesh::updateCameraOffset(v3s16 camera_offset)
 			m_mesh->setDirty();
 		}
 		m_camera_offset = camera_offset;
+	}
+}
+
+void MapBlockMesh::updatePlanetOffset(v3s16 planet_offset) {
+	if (planet_offset != m_planet_offset) {
+		translateMesh(m_mesh, intToFloat(m_planet_offset - planet_offset, BS));
+		if (m_enable_vbo)
+			m_mesh->setDirty();
+		m_planet_offset = planet_offset;
 	}
 }
 

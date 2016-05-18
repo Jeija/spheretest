@@ -123,6 +123,7 @@ public:
 	}
 	
 	void updateCameraOffset(v3s16 camera_offset);
+	void updatePlanetOffset(v3s16 planet_offset);
 
 private:
 	scene::IMesh *m_mesh;
@@ -160,6 +161,9 @@ private:
 	
 	// Camera offset info -> do we have to translate the mesh?
 	v3s16 m_camera_offset;
+
+	// Mesh offset that is caused by the map wrapping around when rendering in planet mode
+	v3s16 m_planet_offset;
 };
 
 

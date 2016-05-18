@@ -242,18 +242,56 @@ void ClientMap::updateDrawList(video::IVideoDriver* driver)
 				Compare block position to camera position, skip
 				if not seen on display
 			*/
-
 			if (block->mesh != NULL)
 				block->mesh->updateCameraOffset(m_camera_offset);
 
-			float range = 100000 * BS;
-			if (m_control.range_all == false)
-				range = m_control.wanted_range * BS;
+			/*
+			 * Planet: Since the planet is actually just a flat map that wraps around
+			 * a seemingly spherical object, there are 9 possible minimal distances to
+			 * the same mapblock, because the end of the map on one side is the beginning
+			 * of the map on the other side again. Find the minimal distance from the player
+			 * to this mapblock.
+			 */
+			if (block->mesh != NULL && g_settings->getBool("planet_enable")) {
+				// Round planet circumference up to even number of mapblocks, in nodes
+				int planet_circumference = ceil(g_settings->getU16("planet_radius") * M_PI) * 2 * MAP_BLOCKSIZE;
+
+				float mindist = (cam_pos_nodes - block->getPos() * MAP_BLOCKSIZE).getLength();
+				int offset_minimal_x = 0, offset_minimal_z = 0;
+				for (int wrapx = -1; wrapx <= 1; ++wrapx)
+				for (int wrapz = -1; wrapz <= 1; ++wrapz) {
+					float distx = cam_pos_nodes.X - (block->getPos().X * MAP_BLOCKSIZE + wrapx * planet_circumference);
+					float distz = cam_pos_nodes.Z - (block->getPos().Z * MAP_BLOCKSIZE + wrapz * planet_circumference);
+					float dist = sqrt(distx * distx + distz * distz);
+
+					if (dist < mindist) {
+						mindist = dist;
+						offset_minimal_x = wrapx * planet_circumference;
+						offset_minimal_z = wrapz * planet_circumference;
+					}
+				}
+				block->mesh->updatePlanetOffset(-v3s16(offset_minimal_x, 0, offset_minimal_z));
+
+				// No need to render blocks deeper inside the planet than its radius
+				// or on the other side of the planet
+				if (block->getPos().Y < -g_settings->getU16("planet_radius"))
+					continue;
+
+				if (mindist > planet_circumference / 4)
+					continue;
+			}
 
 			float d = 0.0;
-			if (!isBlockInSight(block->getPos(), camera_position,
-					camera_direction, camera_fov, range, &d))
-				continue;
+
+			if (!g_settings->getBool("planet_enable")) {
+				float range = 100000 * BS;
+				if (m_control.range_all == false)
+					range = m_control.wanted_range * BS;
+
+				if (!isBlockInSight(block->getPos(), camera_position,
+						camera_direction, camera_fov, range, &d))
+					continue;
+			}
 
 			// This is ugly (spherical distance limit?)
 			/*if(m_control.range_all == false &&
@@ -281,6 +319,8 @@ void ClientMap::updateDrawList(video::IVideoDriver* driver)
 			// No occlusion culling when free_move is on and camera is
 			// inside ground
 			bool occlusion_culling_enabled = true;
+			if (g_settings->getBool("planet_enable"))
+				occlusion_culling_enabled = false;
 			if (g_settings->getBool("free_move")) {
 				MapNode n = getNodeNoEx(cam_pos_nodes);
 				if (n.getContent() == CONTENT_IGNORE ||
@@ -329,6 +369,20 @@ void ClientMap::updateDrawList(video::IVideoDriver* driver)
 					!m_control.range_all &&
 					d > m_control.wanted_range * BS)
 				continue;
+
+			// Planet: Make sure block inside of planet bounds
+			if (g_settings->getBool("planet_enable")) {
+				// Round planet circumference up to even number of mapblocks
+				int planet_circumference_blocks = ceil(g_settings->getU16("planet_radius") * M_PI) * 2;
+				if (block->getPos().X > planet_circumference_blocks / 2 - 1)
+					continue;
+				if (block->getPos().X < -planet_circumference_blocks / 2)
+					continue;
+				if (block->getPos().Z > planet_circumference_blocks / 2 - 1)
+					continue;
+				if (block->getPos().Z < -planet_circumference_blocks / 2)
+					continue;
+			}
 
 			// Add to set
 			block->refGrab();
@@ -476,7 +530,7 @@ void ClientMap::renderMap(video::IVideoDriver* driver, s32 pass)
 			continue;
 
 		float d = 0.0;
-		if (!isBlockInSight(block->getPos(), camera_position,
+		if (!g_settings->getBool("planet_enable") && !isBlockInSight(block->getPos(), camera_position,
 				camera_direction, camera_fov, 100000 * BS, &d))
 			continue;
 

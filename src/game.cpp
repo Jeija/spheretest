@@ -1481,6 +1481,7 @@ struct VolatileRunFlags {
 	bool disable_camera_update;
 	bool first_loop_after_window_activation;
 	bool camera_offset_changed;
+	bool planet_warp_changed;
 };
 
 
@@ -1610,6 +1611,7 @@ protected:
 			f32 dtime);
 	void updateFrame(ProfilerGraph *graph, RunStats *stats, GameRunData *runData,
 			f32 dtime, const VolatileRunFlags &flags, const CameraOrientation &cam);
+	void handlePlanet(VolatileRunFlags *flags);
 	void updateGui(float *statustext_time, const RunStats &stats,
 			const GameRunData& runData, f32 dtime, const VolatileRunFlags &flags,
 			const CameraOrientation &cam);
@@ -1934,6 +1936,7 @@ void Game::run()
 
 		// Update if minimap has been disabled by the server
 		flags.show_minimap &= !client->isMinimapDisabledByServer();
+		handlePlanet(&flags);
 	}
 }
 
@@ -4132,7 +4135,7 @@ void Game::updateFrame(ProfilerGraph *graph, RunStats *stats,
 	v3f camera_direction = camera->getDirection();
 	if (runData->update_draw_list_timer >= 0.2
 			|| runData->update_draw_list_last_cam_dir.getDistanceFrom(camera_direction) > 0.2
-			|| flags.camera_offset_changed) {
+			|| flags.camera_offset_changed || flags.planet_warp_changed) {
 		runData->update_draw_list_timer = 0;
 		client->getEnv().getClientMap().updateDrawList(driver);
 		runData->update_draw_list_last_cam_dir = camera_direction;
@@ -4221,6 +4224,29 @@ void Game::updateFrame(ProfilerGraph *graph, RunStats *stats,
 
 	stats->drawtime = tt_draw.stop(true);
 	g_profiler->graphAdd("mainloop_draw", stats->drawtime / 1000.0f);
+}
+
+void Game::handlePlanet(VolatileRunFlags *flags) {
+	LocalPlayer *player = client->getEnv().getLocalPlayer();
+
+	// Quick hack: Teleport to other side of planet at planet edges
+	if (g_settings->getBool("planet_enable")) {
+		// Round planet circumference up to even number of blocks, value in x/z coordinates
+		int planet_circumference = ceil(g_settings->getU16("planet_radius") * M_PI) * BS * MAP_BLOCKSIZE * 2;
+		v3f playerpos = player->getPosition();
+		if (playerpos.X > planet_circumference / 2 - 0.5 * BS)
+			playerpos.X = -(float)planet_circumference / 2 - 0.5 * BS;
+		if (playerpos.X < -planet_circumference / 2 - 0.5 * BS)
+			playerpos.X = (float)planet_circumference / 2 - 0.5 * BS;
+		if (playerpos.Z > planet_circumference / 2 - 0.5 * BS)
+			playerpos.Z = -(float)planet_circumference / 2 - 0.5 * BS;
+		if (playerpos.Z < -planet_circumference / 2 - 0.5 * BS)
+			playerpos.Z = (float)planet_circumference / 2 - 0.5 * BS;
+
+		flags->planet_warp_changed = player->getPosition() != playerpos;
+
+		player->setPosition(playerpos);
+	}
 }
 
 

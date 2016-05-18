@@ -617,20 +617,6 @@ void LocalPlayer::applyControl(float dtime)
 	// Accelerate to target speed with maximum increment
 	accelerateHorizontal(speedH * physics_override_speed, incH * physics_override_speed);
 	accelerateVertical(speedV * physics_override_speed, incV * physics_override_speed);
-
-	// Quick hack: Teleport to other side of planet at planet edges
-	if (g_settings->getBool("planet_enable")) {
-		float planet_circumference = g_settings->getU16("planet_radius") * MAP_BLOCKSIZE * BS * 2 * M_PI;
-		std::cout << "circumference: " << planet_circumference << ", X and Z " << m_position.X << " " << m_position.Z << std::endl;
-		if (m_position.X > planet_circumference / 2)
-			m_position.X = -(float)planet_circumference / 2;
-		if (m_position.X < -planet_circumference / 2)
-			m_position.X = (float)planet_circumference / 2;
-		if (m_position.Z > planet_circumference / 2)
-			m_position.Z = -(float)planet_circumference / 2;
-		if (m_position.Z < -planet_circumference / 2)
-			m_position.Z = (float)planet_circumference / 2;
-	}
 }
 
 v3s16 LocalPlayer::getStandingNodePos()
