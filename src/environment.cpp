@@ -2473,8 +2473,18 @@ void ClientEnvironment::step(float dtime)
 			{
 				// Gravity
 				v3f speed = lplayer->getSpeed();
+
+				float gravity_coeff = 1;
+				float planet_radius = g_settings->getU16("planet_radius") * MAP_BLOCKSIZE * BS;
+				float height = planet_radius + lplayer->getPosition().Y;
+				if (g_settings->getBool("planet_enable") && g_settings->getBool("planet_realistic_gravity")) {
+					if (lplayer->getPosition().Y < 0)
+						gravity_coeff = height / planet_radius;
+					else
+						gravity_coeff = (planet_radius * planet_radius) / (height * height);
+				}
 				if(lplayer->in_liquid == false)
-					speed.Y -= lplayer->movement_gravity * lplayer->physics_override_gravity * dtime_part * 2;
+					speed.Y -= gravity_coeff * lplayer->movement_gravity * lplayer->physics_override_gravity * dtime_part * 2;
 
 
 				// Planet: Apply centrifugal force
