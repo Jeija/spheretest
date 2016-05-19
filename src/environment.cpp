@@ -2476,6 +2476,12 @@ void ClientEnvironment::step(float dtime)
 				if(lplayer->in_liquid == false)
 					speed.Y -= lplayer->movement_gravity * lplayer->physics_override_gravity * dtime_part * 2;
 
+
+				// Planet: Apply centrifugal force
+				if (g_settings->getBool("planet_enable") && g_settings->getBool("planet_centrifugal_enable") && lplayer->in_liquid == false)
+					speed.Y += (speed.X * speed.X + speed.Z * speed.Z) /
+							(g_settings->getU16("planet_radius") * MAP_BLOCKSIZE * BS + lplayer->getPosition().Y) * dtime_part * 2;
+
 				// Liquid floating / sinking
 				if(lplayer->in_liquid && !lplayer->swimming_vertical)
 					speed.Y -= lplayer->movement_liquid_sink * dtime_part * 2;
