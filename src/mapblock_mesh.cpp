@@ -887,7 +887,8 @@ static void updateFastFaceRow(
 					&& tile.rotation == 0
 					&& next_light_source == light_source
 					&& (tile.material_flags & MATERIAL_FLAG_TILEABLE_HORIZONTAL)
-					&& (tile.material_flags & MATERIAL_FLAG_TILEABLE_VERTICAL)) {
+					&& (tile.material_flags & MATERIAL_FLAG_TILEABLE_VERTICAL)
+					&& !g_settings->getBool("planet_enable")) {
 				next_is_different = false;
 			}
 			else{
