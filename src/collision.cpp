@@ -260,6 +260,13 @@ collisionMoveResult collisionMoveSimple(Environment *env, IGameDef *gamedef,
 	for(s16 z = min_z; z <= max_z; z++)
 	{
 		v3s16 p(x,y,z);
+		if (g_settings->getBool("planet_enable")) {
+			int planet_circumference = ceil(g_settings->getU16("planet_radius") * M_PI) * 2 * MAP_BLOCKSIZE;
+			if (p.X >= planet_circumference / 2) p.X -= planet_circumference;
+			if (p.Z >= planet_circumference / 2) p.Z -= planet_circumference;
+			if (p.X < -planet_circumference / 2) p.X += planet_circumference;
+			if (p.Z < -planet_circumference / 2) p.Z += planet_circumference;
+		}
 
 		bool is_position_valid;
 		MapNode n = map->getNodeNoEx(p, &is_position_valid);
