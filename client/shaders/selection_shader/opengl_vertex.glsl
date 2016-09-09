@@ -48,6 +48,17 @@ mat4 inverse(mat4 m) {
 		a20 * b03 - a21 * b01 + a22 * b00) / det;
 }
 
+/*
+ * Complex Number functions
+ */
+#define cplx vec2
+#define cplx_new(re, im) vec2(re, im)
+#define cplx_re(z) z.x
+#define cplx_im(z) z.y
+#define cplx_exp(z) (exp(z.x) * cplx_new(cos(z.y), sin(z.y)))
+#define cplx_scale(z, scalar) (z * scalar)
+#define cplx_abs(z) (sqrt(z.x * z.x + z.y * z.y))
+
 void main(void)
 {
 	gl_TexCoord[0] = gl_MultiTexCoord0;
@@ -57,50 +68,35 @@ void main(void)
 #ifdef ENABLE_PLANET
 	mat4 viewModel = inverse(gl_ModelViewMatrix);
 	vec3 camPos = viewModel[3].xyz;
-
-	// Step 1: Transform normal coordinates into coordinates as if they were on a sphere
-	float xangle = (pos.x - camPos.x) / (PLANET_RADIUS * BS * 16);
-	float zangle = (pos.z - camPos.z) / (PLANET_RADIUS * BS * 16);
-	float distangle = pow(xangle * xangle + zangle * zangle, 0.5);
+	float rp = PLANET_RADIUS * BS * 16;
 
 #ifdef PLANET_KEEP_SCALE
-	/*
-	 * The width of nodes increases with increasing height, which means
-	 * that nodes need to be scaled in their height if we want to make it
-	 * so that the nodes always look like they're normally shaped.
-	 *  With the intercept theorem we get width(x) = (r + camPos.y + x) / r,
-	 * with r = PLANET_RADIUS * BS * MAP_BLOCKSIZE
-	 * and x being the block's visual (not physical!) height above the camera.
-	 * In order to completely and accurately scale all the nodes, we need
-	 * to solve the differential equation x'(p) = q = (r + camPos.y + x(p)) / r
-	 * with p being the physical height of the node above the camera. Obviously
-	 * the visual height is zero if the physical height is zero, so x(0) = 0.
-	 * We get the solution x(p) = (exp(p / r  - 1))*(r + camPos.y)
-	 * If we set p = h = pos.y - camPos.y (distance from camera y to vertex y)
-	 * we get the visual height of the vertex above the camera which is
-	 * x(h) = (exp(h / r  - 1)) * (r + camPos.y) and because the camera is obviously
-	 * at height rcam = r + camPos.y (since y=0 is at radius of planet), for the
-	 * total radius of the vertex we get radius = rcam + x(h) = (camPos.y + r) * exp(h / r)
-	 */
-	float r = PLANET_RADIUS * BS * 16;
-	float h = pos.y - camPos.y;
-	float radius = (camPos.y + r) * exp(h / r);
+	// Complex approach
+	vec2 planedir = normalize(vec2(pos.x - camPos.x, pos.z - camPos.z));
+	cplx plane = cplx_new(pos.y - camPos.y, sqrt((pos.x - camPos.x) * (pos.x - camPos.x) + (pos.z - camPos.z) * (pos.z - camPos.z)));
+	cplx circle = rp * cplx_exp(cplx_scale(plane, 1.0 / rp)) - cplx_new(rp, 0);
+	pos.x = cplx_im(circle) * planedir.x + camPos.x;
+	pos.z = cplx_im(circle) * planedir.y + camPos.z;
+	pos.y = cplx_re(circle) + camPos.y;
 #else
-	float radius = PLANET_RADIUS * BS * 16 + pos.y;
+	// Naive approach
+	vec2 planedir = normalize(vec2(pos.x - camPos.x, pos.z - camPos.z));
+	vec2 plane = vec2(pos.y + rp, sqrt((pos.x - camPos.x) * (pos.x - camPos.x) + (pos.z - camPos.z) * (pos.z - camPos.z)));
+	vec2 circle = plane.x * vec2(cos(plane.y / rp), sin(plane.y / rp)) - vec2(rp, 0);
+	pos.x = circle.y * planedir.x + camPos.x;
+	pos.z = circle.y * planedir.y + camPos.z;
+	pos.y = circle.x;
 #endif
 
-	// Step 2: Transform back from spherical coordinates to cartesian system with
-	// the center of the planet in the origin of the coordinate system.
-	float planet_x = sin(xangle) * radius;
-	float planet_z = sin(zangle) * radius;
-	float planet_y = cos(distangle) * radius;
-
-	// Step 3: Translate coordinates so that they are relative to the camera, not the planet center
-	// The planet center is *always* positioned underneath the player
-	pos.y = planet_y - (PLANET_RADIUS * BS * 16);
-	pos.x = camPos.x + planet_x;
-	pos.z = camPos.z + planet_z;
-	
+	// Code for not scaling nodes so that their size close to the player is normal.
+	// Nodes that are higher up will appear larger (compared to the player).
+	// Due to distortions you won't be able to dig / build blocks normally though.
+	//vec2 planedir = normalize(vec2(pos.x - camPos.x, pos.z - camPos.z));
+	//cplx plane = cplx_new(pos.y, sqrt((pos.x - camPos.x) * (pos.x - camPos.x) + (pos.z - camPos.z) * (pos.z - camPos.z)));
+	//cplx circle = rp * cplx_exp(cplx_scale(plane, 1.0 / rp)) - cplx_new(rp, 0);
+	//pos.x = cplx_im(circle) * planedir.x + camPos.x;
+	//pos.z = cplx_im(circle) * planedir.y + camPos.z;
+	//pos.y = cplx_re(circle);
 #endif
 
 	gl_Position = mWorldViewProj * pos;
