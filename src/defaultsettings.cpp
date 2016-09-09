@@ -326,6 +326,7 @@ void set_default_settings(Settings *settings)
 	settings->setDefault("planet_keep_scale", "true");
 	settings->setDefault("planet_centrifugal_enable", "true");
 	settings->setDefault("planet_realistic_gravity", "false");
+	settings->setDefault("planet_fallthrough_enable", "true");
 
 	// IPv6
 	settings->setDefault("enable_ipv6", "true");
