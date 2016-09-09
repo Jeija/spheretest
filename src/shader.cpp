@@ -773,7 +773,7 @@ ShaderInfo generate_shader(std::string name, u8 material_type, u8 drawtype,
 	if (g_settings->getBool("planet_keep_scale"))
 		shaders_header += "#define PLANET_KEEP_SCALE\n";
 
-	shaders_header += "#define PLANET_RADIUS " + to_string(g_settings->getU16("planet_radius")) + "\n";
+	shaders_header += "#define PLANET_RADIUS " + itos(g_settings->getU16("planet_radius")) + "\n";
 
 	// Call addHighLevelShaderMaterial() or addShaderMaterial()
 	const c8* vertex_program_ptr = 0;
