@@ -2479,20 +2479,28 @@ void ClientEnvironment::step(float dtime)
 				float gravity_coeff = 1;
 				float planet_radius = g_settings->getU16("planet_radius") * MAP_BLOCKSIZE * BS;
 				float height = planet_radius + lplayer->getPosition().Y;
+
+				// When stretching out the planet so that blocks keep their aspect ratio,
+				// the height will actually be the magnitude of the complex exponential function
+				if (g_settings->getBool("planet_keep_scale"))
+					height = planet_radius * exp(lplayer->getPosition().Y / planet_radius);
+				float blockwidth = height / planet_radius;
+
 				if (g_settings->getBool("planet_enable") && g_settings->getBool("planet_realistic_gravity")) {
 					if (lplayer->getPosition().Y < 0)
 						gravity_coeff = height / planet_radius;
 					else
 						gravity_coeff = (planet_radius * planet_radius) / (height * height);
 				}
+
 				if(lplayer->in_liquid == false)
 					speed.Y -= gravity_coeff * lplayer->movement_gravity * lplayer->physics_override_gravity * dtime_part * 2;
 
 
 				// Planet: Apply centrifugal force
+				// a_z = v^2 / height with v = (horizontal speed) * (block width at that height)
 				if (g_settings->getBool("planet_enable") && g_settings->getBool("planet_centrifugal_enable") && lplayer->in_liquid == false)
-					speed.Y += (speed.X * speed.X + speed.Z * speed.Z) /
-							(g_settings->getU16("planet_radius") * MAP_BLOCKSIZE * BS + lplayer->getPosition().Y) * dtime_part * 2;
+					speed.Y += (speed.X * speed.X + speed.Z * speed.Z) * blockwidth * blockwidth / height * dtime_part * 2;
 
 				// Liquid floating / sinking
 				if(lplayer->in_liquid && !lplayer->swimming_vertical)
