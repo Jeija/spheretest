@@ -29,7 +29,9 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 #include "modalMenu.h"
 #include "guiTable.h"
 #include "network/networkprotocol.h"
+#include "client/joystick_controller.h"
 #include "util/string.h"
+#include "util/enriched_string.h"
 
 class IGameDef;
 class InventoryManager;
@@ -141,9 +143,10 @@ class GUIFormSpecMenu : public GUIModalMenu
 	struct ImageDrawSpec
 	{
 		ImageDrawSpec():
-			parent_button(NULL)
-		{
-		}
+			parent_button(NULL),
+			clip(false)
+		{}
+
 		ImageDrawSpec(const std::string &a_name,
 				const std::string &a_item_name,
 				gui::IGUIButton *a_parent_button,
@@ -153,9 +156,10 @@ class GUIFormSpecMenu : public GUIModalMenu
 			parent_button(a_parent_button),
 			pos(a_pos),
 			geom(a_geom),
-			scale(true)
-		{
-		}
+			scale(true),
+			clip(false)
+		{}
+
 		ImageDrawSpec(const std::string &a_name,
 				const std::string &a_item_name,
 				const v2s32 &a_pos, const v2s32 &a_geom):
@@ -164,32 +168,36 @@ class GUIFormSpecMenu : public GUIModalMenu
 			parent_button(NULL),
 			pos(a_pos),
 			geom(a_geom),
-			scale(true)
-		{
-		}
+			scale(true),
+			clip(false)
+		{}
+
 		ImageDrawSpec(const std::string &a_name,
-				const v2s32 &a_pos, const v2s32 &a_geom):
+				const v2s32 &a_pos, const v2s32 &a_geom, bool clip=false):
 			name(a_name),
 			parent_button(NULL),
 			pos(a_pos),
 			geom(a_geom),
-			scale(true)
-		{
-		}
+			scale(true),
+			clip(clip)
+		{}
+
 		ImageDrawSpec(const std::string &a_name,
 				const v2s32 &a_pos):
 			name(a_name),
 			parent_button(NULL),
 			pos(a_pos),
-			scale(false)
-		{
-		}
+			scale(false),
+			clip(false)
+		{}
+
 		std::string name;
 		std::string item_name;
 		gui::IGUIButton *parent_button;
 		v2s32 pos;
 		v2s32 geom;
 		bool scale;
+		bool clip;
 	};
 
 	struct FieldSpec
@@ -200,19 +208,22 @@ class GUIFormSpecMenu : public GUIModalMenu
 		FieldSpec(const std::string &name, const std::wstring &label,
 				const std::wstring &default_text, int id) :
 			fname(name),
-			fid(id)
+			flabel(label),
+			fid(id),
+			send(false),
+			close_on_enter(false),
+			ftype(f_Unknown),
+			is_exit(false)
 		{
-			flabel = unescape_enriched(label);
+			//flabel = unescape_enriched(label);
 			fdefault = unescape_enriched(default_text);
-			send = false;
-			ftype = f_Unknown;
-			is_exit = false;
 		}
 		std::string fname;
 		std::wstring flabel;
 		std::wstring fdefault;
 		int fid;
 		bool send;
+		bool close_on_enter; // used by text fields
 		FormspecFieldType ftype;
 		bool is_exit;
 		core::rect<s32> rect;
@@ -239,7 +250,8 @@ class GUIFormSpecMenu : public GUIModalMenu
 			bgcolor(a_bgcolor),
 			color(a_color)
 		{
-			tooltip = unescape_enriched(utf8_to_wide(a_tooltip));
+			//tooltip = unescape_enriched(utf8_to_wide(a_tooltip));
+			tooltip = utf8_to_wide(a_tooltip);
 		}
 		std::wstring tooltip;
 		irr::video::SColor bgcolor;
@@ -256,7 +268,8 @@ class GUIFormSpecMenu : public GUIModalMenu
 			rect(a_rect),
 			parent_button(NULL)
 		{
-			text = unescape_enriched(a_text);
+			//text = unescape_enriched(a_text);
+			text = a_text;
 		}
 		StaticTextSpec(const std::wstring &a_text,
 				const core::rect<s32> &a_rect,
@@ -264,7 +277,8 @@ class GUIFormSpecMenu : public GUIModalMenu
 			rect(a_rect),
 			parent_button(a_parent_button)
 		{
-			text = unescape_enriched(a_text);
+			//text = unescape_enriched(a_text);
+			text = a_text;
 		}
 		std::wstring text;
 		core::rect<s32> rect;
@@ -273,6 +287,7 @@ class GUIFormSpecMenu : public GUIModalMenu
 
 public:
 	GUIFormSpecMenu(irr::IrrlichtDevice* dev,
+			JoystickController *joystick,
 			gui::IGUIElement* parent, s32 id,
 			IMenuManager *menumgr,
 			InventoryManager *invmgr,
@@ -419,7 +434,6 @@ protected:
 
 	bool m_bgfullscreen;
 	bool m_slotborder;
-	bool m_clipbackground;
 	video::SColor m_bgcolor;
 	video::SColor m_slotbg_n;
 	video::SColor m_slotbg_h;
@@ -428,10 +442,11 @@ protected:
 	video::SColor m_default_tooltip_color;
 
 private:
-	IFormSource      *m_form_src;
-	TextDest         *m_text_dst;
-	unsigned int      m_formspec_version;
-	std::string       m_focused_element;
+	IFormSource        *m_form_src;
+	TextDest           *m_text_dst;
+	unsigned int        m_formspec_version;
+	std::string         m_focused_element;
+	JoystickController *m_joystick;
 
 	typedef struct {
 		bool explicit_size;
@@ -455,6 +470,7 @@ private:
 	} fs_key_pendig;
 
 	fs_key_pendig current_keys_pending;
+	std::string current_field_enter_pending;
 
 	void parseElement(parserData* data,std::string element);
 
@@ -488,6 +504,8 @@ private:
 	bool parseVersionDirect(std::string data);
 	bool parseSizeDirect(parserData* data, std::string element);
 	void parseScrollBar(parserData* data, std::string element);
+
+	void tryClose();
 
 	/**
 	 * check if event is part of a double click
@@ -547,4 +565,3 @@ public:
 };
 
 #endif
-

@@ -266,9 +266,6 @@ Server::Server(
 	//lock environment
 	MutexAutoLock envlock(m_env_mutex);
 
-	// Load mapgen params from Settings
-	m_emerge->loadMapgenParams();
-
 	// Create the Map (loads map_meta.txt, overriding configured mapgen params)
 	ServerMap *servermap = new ServerMap(path_world, this, m_emerge);
 
@@ -331,8 +328,11 @@ Server::Server(
 
 	m_clients.setEnv(m_env);
 
+	if (!servermap->settings_mgr.makeMapgenParams())
+		FATAL_ERROR("Couldn't create any mapgen type");
+
 	// Initialize mapgens
-	m_emerge->initMapgens();
+	m_emerge->initMapgens(servermap->getMapgenParams());
 
 	m_enable_rollback_recording = g_settings->getBool("enable_rollback_recording");
 	if (m_enable_rollback_recording) {
@@ -402,11 +402,8 @@ Server::~Server()
 	m_emerge->stopThreads();
 
 	// Delete things in the reverse order of creation
-	delete m_env;
-
-	// N.B. the EmergeManager should be deleted after the Environment since Map
-	// depends on EmergeManager to write its current params to the map meta
 	delete m_emerge;
+	delete m_env;
 	delete m_rollback;
 	delete m_banmanager;
 	delete m_event;
@@ -655,7 +652,7 @@ void Server::AsyncRunStep(bool initial_step)
 					m_env->getGameTime(),
 					m_lag,
 					m_gamespec.id,
-					m_emerge->params.mg_name,
+					Mapgen::getMapgenName(m_emerge->mgparams->mgtype),
 					m_mods);
 			counter = 0.01;
 		}
@@ -1121,23 +1118,6 @@ PlayerSAO* Server::StageTwoClientInit(u16 peer_id)
 	if(!m_simple_singleplayer_mode) {
 		// Send information about server to player in chat
 		SendChatMessage(peer_id, getStatusString());
-
-		// Send information about joining in chat
-		{
-			std::string name = "unknown";
-			Player *player = m_env->getPlayer(peer_id);
-			if(player != NULL)
-				name = player->getName();
-
-			std::wstring message;
-			message += L"*** ";
-			message += narrow_to_wide(name);
-			message += L" joined the game.";
-			SendChatMessage(PEER_ID_INEXISTENT,message);
-			if (m_admin_chat)
-				m_admin_chat->outgoing_queue.push_back(
-					new ChatEventNick(CET_NICK_ADD, name));
-		}
 	}
 	Address addr = getPeerAddress(player->peer_id);
 	std::string ip_str = addr.serializeString();
@@ -1673,7 +1653,8 @@ void Server::SendShowFormspecMessage(u16 peer_id, const std::string &formspec,
 // Spawns a particle on peer with peer_id
 void Server::SendSpawnParticle(u16 peer_id, v3f pos, v3f velocity, v3f acceleration,
 				float expirationtime, float size, bool collisiondetection,
-				bool vertical, std::string texture)
+				bool collision_removal,
+				bool vertical, const std::string &texture)
 {
 	DSTACK(FUNCTION_NAME);
 
@@ -1683,6 +1664,7 @@ void Server::SendSpawnParticle(u16 peer_id, v3f pos, v3f velocity, v3f accelerat
 			<< size << collisiondetection;
 	pkt.putLongString(texture);
 	pkt << vertical;
+	pkt << collision_removal;
 
 	if (peer_id != PEER_ID_INEXISTENT) {
 		Send(&pkt);
@@ -1695,7 +1677,8 @@ void Server::SendSpawnParticle(u16 peer_id, v3f pos, v3f velocity, v3f accelerat
 // Adds a ParticleSpawner on peer with peer_id
 void Server::SendAddParticleSpawner(u16 peer_id, u16 amount, float spawntime, v3f minpos, v3f maxpos,
 	v3f minvel, v3f maxvel, v3f minacc, v3f maxacc, float minexptime, float maxexptime,
-	float minsize, float maxsize, bool collisiondetection, bool vertical, std::string texture, u32 id)
+	float minsize, float maxsize, bool collisiondetection, bool collision_removal,
+	bool vertical, const std::string &texture, u32 id)
 {
 	DSTACK(FUNCTION_NAME);
 
@@ -1708,6 +1691,7 @@ void Server::SendAddParticleSpawner(u16 peer_id, u16 amount, float spawntime, v3
 	pkt.putLongString(texture);
 
 	pkt << id << vertical;
+	pkt << collision_removal;
 
 	if (peer_id != PEER_ID_INEXISTENT) {
 		Send(&pkt);
@@ -2659,19 +2643,6 @@ void Server::DeleteClient(u16 peer_id, ClientDeletionReason reason)
 
 		Player *player = m_env->getPlayer(peer_id);
 
-		// Collect information about leaving in chat
-		{
-			if(player != NULL && reason != CDR_DENY)
-			{
-				std::wstring name = narrow_to_wide(player->getName());
-				message += L"*** ";
-				message += name;
-				message += L" left the game.";
-				if(reason == CDR_TIMEOUT)
-					message += L" (timed out)";
-			}
-		}
-
 		/* Run scripts and remove from environment */
 		{
 			if(player != NULL)
@@ -2679,7 +2650,7 @@ void Server::DeleteClient(u16 peer_id, ClientDeletionReason reason)
 				PlayerSAO *playersao = player->getPlayerSAO();
 				assert(playersao);
 
-				m_script->on_leaveplayer(playersao);
+				m_script->on_leaveplayer(playersao, reason == CDR_TIMEOUT);
 
 				playersao->disconnected();
 			}
@@ -3160,7 +3131,8 @@ void Server::notifyPlayers(const std::wstring &msg)
 void Server::spawnParticle(const std::string &playername, v3f pos,
 	v3f velocity, v3f acceleration,
 	float expirationtime, float size, bool
-	collisiondetection, bool vertical, const std::string &texture)
+	collisiondetection, bool collision_removal,
+	bool vertical, const std::string &texture)
 {
 	// m_env will be NULL if the server is initializing
 	if (!m_env)
@@ -3175,13 +3147,15 @@ void Server::spawnParticle(const std::string &playername, v3f pos,
 	}
 
 	SendSpawnParticle(peer_id, pos, velocity, acceleration,
-			expirationtime, size, collisiondetection, vertical, texture);
+			expirationtime, size, collisiondetection,
+			collision_removal, vertical, texture);
 }
 
 u32 Server::addParticleSpawner(u16 amount, float spawntime,
 	v3f minpos, v3f maxpos, v3f minvel, v3f maxvel, v3f minacc, v3f maxacc,
 	float minexptime, float maxexptime, float minsize, float maxsize,
-	bool collisiondetection, bool vertical, const std::string &texture,
+	bool collisiondetection, bool collision_removal,
+	bool vertical, const std::string &texture,
 	const std::string &playername)
 {
 	// m_env will be NULL if the server is initializing
@@ -3200,7 +3174,7 @@ u32 Server::addParticleSpawner(u16 amount, float spawntime,
 	SendAddParticleSpawner(peer_id, amount, spawntime,
 		minpos, maxpos, minvel, maxvel, minacc, maxacc,
 		minexptime, maxexptime, minsize, maxsize,
-		collisiondetection, vertical, texture, id);
+		collisiondetection, collision_removal, vertical, texture, id);
 
 	return id;
 }

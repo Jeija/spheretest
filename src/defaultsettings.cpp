@@ -40,6 +40,7 @@ void set_default_settings(Settings *settings)
 	settings->setDefault("keymap_jump", "KEY_SPACE");
 	settings->setDefault("keymap_sneak", "KEY_LSHIFT");
 	settings->setDefault("keymap_drop", "KEY_KEY_Q");
+	settings->setDefault("keymap_zoom", "KEY_KEY_Z");
 	settings->setDefault("keymap_inventory", "KEY_KEY_I");
 	settings->setDefault("keymap_special1", "KEY_KEY_E");
 	settings->setDefault("keymap_chat", "KEY_KEY_T");
@@ -50,7 +51,7 @@ void set_default_settings(Settings *settings)
 	settings->setDefault("keymap_freemove", "KEY_KEY_K");
 	settings->setDefault("keymap_fastmove", "KEY_KEY_J");
 	settings->setDefault("keymap_noclip", "KEY_KEY_H");
-	settings->setDefault("keymap_cinematic", "KEY_F8");
+	settings->setDefault("keymap_cinematic", "");
 	settings->setDefault("keymap_screenshot", "KEY_F12");
 	settings->setDefault("keymap_toggle_hud", "KEY_F1");
 	settings->setDefault("keymap_toggle_chat", "KEY_F2");
@@ -74,6 +75,7 @@ void set_default_settings(Settings *settings)
 	settings->setDefault("always_fly_fast", "true");
 	settings->setDefault("directional_colored_fog", "true");
 	settings->setDefault("tooltip_show_delay", "400");
+	settings->setDefault("zoom_fov", "15");
 
 	// Some (temporary) keys for debugging
 	settings->setDefault("keymap_print_debug_stacks", "KEY_KEY_P");
@@ -116,6 +118,9 @@ void set_default_settings(Settings *settings)
 	settings->setDefault("free_move", "false");
 	settings->setDefault("noclip", "false");
 	settings->setDefault("continuous_forward", "false");
+	settings->setDefault("enable_joysticks", "false");
+	settings->setDefault("repeat_joystick_button_time", "0.17");
+	settings->setDefault("joystick_frustum_sensitivity", "170");
 	settings->setDefault("cinematic", "false");
 	settings->setDefault("camera_smoothing", "0");
 	settings->setDefault("cinematic_camera_smoothing", "0.7");
@@ -185,7 +190,7 @@ void set_default_settings(Settings *settings)
 	settings->setDefault("minimap_shape_round", "true");
 	settings->setDefault("minimap_double_scan_height", "true");
 
-	settings->setDefault("send_pre_v25_init", "true");
+	settings->setDefault("send_pre_v25_init", "false");
 
 	settings->setDefault("curl_timeout", "5000");
 	settings->setDefault("curl_parallel_limit", "8");
@@ -201,6 +206,8 @@ void set_default_settings(Settings *settings)
 	settings->setDefault("server_address", "");
 	settings->setDefault("server_name", "");
 	settings->setDefault("server_description", "");
+
+	settings->setDefault("disable_escape_sequences", "false");
 
 #if USE_FREETYPE
 	settings->setDefault("freetype", "true");

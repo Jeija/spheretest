@@ -546,7 +546,6 @@ GenericCAO::GenericCAO(IGameDef *gamedef, ClientEnvironment *env):
 		//
 		m_smgr(NULL),
 		m_irr(NULL),
-		m_camera(NULL),
 		m_gamedef(NULL),
 		m_selection_box(-BS/3.,-BS/3.,-BS/3., BS/3.,BS/3.,BS/3.),
 		m_meshnode(NULL),
@@ -804,7 +803,7 @@ void GenericCAO::removeFromScene(bool permanent)
 	}
 }
 
-void GenericCAO::addToScene(scene::ISceneManager *smgr, 
+void GenericCAO::addToScene(scene::ISceneManager *smgr,
 		ITextureSource *tsrc, IrrlichtDevice *irr)
 {
 	m_smgr = smgr;
@@ -840,54 +839,50 @@ void GenericCAO::addToScene(scene::ISceneManager *smgr,
 			setBillboardTextureMatrix(m_spritenode,
 					txs, tys, 0, 0);
 		}
-	}
-	else if(m_prop.visual == "upright_sprite") {
+	} else if (m_prop.visual == "upright_sprite") {
 		scene::SMesh *mesh = new scene::SMesh();
-		double dx = BS*m_prop.visual_size.X/2;
-		double dy = BS*m_prop.visual_size.Y/2;
-		{ // Front
-		scene::IMeshBuffer *buf = new scene::SMeshBuffer();
+		double dx = BS * m_prop.visual_size.X / 2;
+		double dy = BS * m_prop.visual_size.Y / 2;
 		u8 li = m_last_light;
-		video::SColor c(255,li,li,li);
-		video::S3DVertex vertices[4] =
-		{
-			video::S3DVertex(-dx,-dy,0, 0,0,0, c, 0,1),
-			video::S3DVertex(dx,-dy,0, 0,0,0, c, 1,1),
-			video::S3DVertex(dx,dy,0, 0,0,0, c, 1,0),
-			video::S3DVertex(-dx,dy,0, 0,0,0, c, 0,0),
-		};
-		u16 indices[] = {0,1,2,2,3,0};
-		buf->append(vertices, 4, indices, 6);
-		// Set material
-		buf->getMaterial().setFlag(video::EMF_LIGHTING, false);
-		buf->getMaterial().setFlag(video::EMF_BILINEAR_FILTER, false);
-		buf->getMaterial().setFlag(video::EMF_FOG_ENABLE, true);
-		buf->getMaterial().MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
-		// Add to mesh
-		mesh->addMeshBuffer(buf);
-		buf->drop();
+		video::SColor c(255, li, li, li);
+
+		{ // Front
+			scene::IMeshBuffer *buf = new scene::SMeshBuffer();
+			video::S3DVertex vertices[4] = {
+				video::S3DVertex(-dx, -dy, 0, 0,0,0, c, 1,1),
+				video::S3DVertex( dx, -dy, 0, 0,0,0, c, 0,1),
+				video::S3DVertex( dx,  dy, 0, 0,0,0, c, 0,0),
+				video::S3DVertex(-dx,  dy, 0, 0,0,0, c, 1,0),
+			};
+			u16 indices[] = {0,1,2,2,3,0};
+			buf->append(vertices, 4, indices, 6);
+			// Set material
+			buf->getMaterial().setFlag(video::EMF_LIGHTING, false);
+			buf->getMaterial().setFlag(video::EMF_BILINEAR_FILTER, false);
+			buf->getMaterial().setFlag(video::EMF_FOG_ENABLE, true);
+			buf->getMaterial().MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL;
+			// Add to mesh
+			mesh->addMeshBuffer(buf);
+			buf->drop();
 		}
 		{ // Back
-		scene::IMeshBuffer *buf = new scene::SMeshBuffer();
-		u8 li = m_last_light;
-		video::SColor c(255,li,li,li);
-		video::S3DVertex vertices[4] =
-		{
-			video::S3DVertex(dx,-dy,0, 0,0,0, c, 1,1),
-			video::S3DVertex(-dx,-dy,0, 0,0,0, c, 0,1),
-			video::S3DVertex(-dx,dy,0, 0,0,0, c, 0,0),
-			video::S3DVertex(dx,dy,0, 0,0,0, c, 1,0),
-		};
-		u16 indices[] = {0,1,2,2,3,0};
-		buf->append(vertices, 4, indices, 6);
-		// Set material
-		buf->getMaterial().setFlag(video::EMF_LIGHTING, false);
-		buf->getMaterial().setFlag(video::EMF_BILINEAR_FILTER, false);
-		buf->getMaterial().setFlag(video::EMF_FOG_ENABLE, true);
-		buf->getMaterial().MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL_REF;
-		// Add to mesh
-		mesh->addMeshBuffer(buf);
-		buf->drop();
+			scene::IMeshBuffer *buf = new scene::SMeshBuffer();
+			video::S3DVertex vertices[4] = {
+				video::S3DVertex( dx,-dy, 0, 0,0,0, c, 1,1),
+				video::S3DVertex(-dx,-dy, 0, 0,0,0, c, 0,1),
+				video::S3DVertex(-dx, dy, 0, 0,0,0, c, 0,0),
+				video::S3DVertex( dx, dy, 0, 0,0,0, c, 1,0),
+			};
+			u16 indices[] = {0,1,2,2,3,0};
+			buf->append(vertices, 4, indices, 6);
+			// Set material
+			buf->getMaterial().setFlag(video::EMF_LIGHTING, false);
+			buf->getMaterial().setFlag(video::EMF_BILINEAR_FILTER, false);
+			buf->getMaterial().setFlag(video::EMF_FOG_ENABLE, true);
+			buf->getMaterial().MaterialType = video::EMT_TRANSPARENT_ALPHA_CHANNEL_REF;
+			// Add to mesh
+			mesh->addMeshBuffer(buf);
+			buf->drop();
 		}
 		m_meshnode = smgr->addMeshSceneNode(mesh, NULL);
 		m_meshnode->grab();
@@ -1057,7 +1052,9 @@ void GenericCAO::step(float dtime, ClientEnvironment *env)
 			PlayerControl controls = player->getPlayerControl();
 
 			bool walking = false;
-			if(controls.up || controls.down || controls.left || controls.right)
+			if (controls.up || controls.down || controls.left || controls.right ||
+					controls.forw_move_joystick_axis != 0.f ||
+					controls.sidew_move_joystick_axis != 0.f)
 				walking = true;
 
 			f32 new_speed = player->local_animation_speed;

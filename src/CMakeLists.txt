@@ -189,6 +189,36 @@ if(ENABLE_CURSES)
 	endif()
 endif(ENABLE_CURSES)
 
+option(ENABLE_POSTGRESQL "Enable PostgreSQL backend" TRUE)
+set(USE_POSTGRESQL FALSE)
+
+if(ENABLE_POSTGRESQL)
+	find_program(POSTGRESQL_CONFIG_EXECUTABLE pg_config DOC "pg_config")
+	find_library(POSTGRESQL_LIBRARY pq)
+	if(POSTGRESQL_CONFIG_EXECUTABLE)
+		execute_process(COMMAND ${POSTGRESQL_CONFIG_EXECUTABLE} --includedir-server
+			OUTPUT_VARIABLE POSTGRESQL_SERVER_INCLUDE_DIRS
+			OUTPUT_STRIP_TRAILING_WHITESPACE)
+		execute_process(COMMAND ${POSTGRESQL_CONFIG_EXECUTABLE}
+			OUTPUT_VARIABLE POSTGRESQL_CLIENT_INCLUDE_DIRS
+			OUTPUT_STRIP_TRAILING_WHITESPACE)
+		# This variable is case sensitive for the cmake PostgreSQL module
+		set(PostgreSQL_ADDITIONAL_SEARCH_PATHS ${POSTGRESQL_SERVER_INCLUDE_DIRS} ${POSTGRESQL_CLIENT_INCLUDE_DIRS})
+	endif()
+
+	find_package("PostgreSQL")
+
+	if(POSTGRESQL_FOUND)
+		set(USE_POSTGRESQL TRUE)
+		message(STATUS "PostgreSQL backend enabled")
+		# This variable is case sensitive, don't try to change it to POSTGRESQL_INCLUDE_DIR
+		message(STATUS "PostgreSQL includes: ${PostgreSQL_INCLUDE_DIR}")
+		include_directories(${PostgreSQL_INCLUDE_DIR})
+	else()
+		message(STATUS "PostgreSQL not found!")
+	endif()
+endif(ENABLE_POSTGRESQL)
+
 option(ENABLE_LEVELDB "Enable LevelDB backend" TRUE)
 set(USE_LEVELDB FALSE)
 
@@ -306,7 +336,10 @@ else()
 	if(APPLE)
 		set(PLATFORM_LIBS "-framework CoreFoundation" ${PLATFORM_LIBS})
 	else()
-		set(PLATFORM_LIBS -lrt ${PLATFORM_LIBS})
+		check_library_exists(rt clock_gettime "" HAVE_LIBRT)
+		if (HAVE_LIBRT)
+			set(PLATFORM_LIBS -lrt ${PLATFORM_LIBS})
+		endif(HAVE_LIBRT)
 	endif(APPLE)
 
 	# This way Xxf86vm is found on OpenBSD too
@@ -346,6 +379,7 @@ add_subdirectory(network)
 add_subdirectory(script)
 add_subdirectory(unittest)
 add_subdirectory(util)
+add_subdirectory(irrlicht_changes)
 
 set(common_SRCS
 	ban.cpp
@@ -361,6 +395,7 @@ set(common_SRCS
 	craftdef.cpp
 	database-dummy.cpp
 	database-leveldb.cpp
+	database-postgresql.cpp
 	database-redis.cpp
 	database-sqlite3.cpp
 	database.cpp
@@ -379,6 +414,7 @@ set(common_SRCS
 	light.cpp
 	log.cpp
 	map.cpp
+	map_settings_manager.cpp
 	mapblock.cpp
 	mapgen.cpp
 	mapgen_flat.cpp
@@ -462,6 +498,7 @@ set(client_SRCS
 	${common_SRCS}
 	${sound_SRCS}
 	${client_network_SRCS}
+	${client_irrlicht_changes_SRCS}
 	camera.cpp
 	client.cpp
 	clientmap.cpp
@@ -522,6 +559,7 @@ include_directories(
 	${LUA_INCLUDE_DIR}
 	${GMP_INCLUDE_DIR}
 	${JSON_INCLUDE_DIR}
+	${X11_INCLUDE_DIR}
 	${PROJECT_SOURCE_DIR}/script
 )
 
@@ -592,6 +630,9 @@ if(BUILD_CLIENT)
 	if (USE_CURSES)
 		target_link_libraries(${PROJECT_NAME} ${CURSES_LIBRARIES})
 	endif()
+	if (USE_POSTGRESQL)
+		target_link_libraries(${PROJECT_NAME} ${POSTGRESQL_LIBRARY})
+	endif()
 	if (USE_LEVELDB)
 		target_link_libraries(${PROJECT_NAME} ${LEVELDB_LIBRARY})
 	endif()
@@ -621,6 +662,9 @@ if(BUILD_SERVER)
 			COMPILE_DEFINITIONS "SERVER")
 	if (USE_CURSES)
 		target_link_libraries(${PROJECT_NAME}server ${CURSES_LIBRARIES})
+	endif()
+	if (USE_POSTGRESQL)
+		target_link_libraries(${PROJECT_NAME}server ${POSTGRESQL_LIBRARY})
 	endif()
 	if (USE_LEVELDB)
 		target_link_libraries(${PROJECT_NAME}server ${LEVELDB_LIBRARY})

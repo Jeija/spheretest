@@ -145,7 +145,7 @@ size_t Decoration::placeDeco(Mapgen *mg, u32 blockseed, v3s16 nmin, v3s16 nmax)
 				y < y_min  || y > y_max)
 				continue;
 
-			if (y + getHeight() >= mg->vm->m_area.MaxEdge.Y) {
+			if (y + getHeight() > mg->vm->m_area.MaxEdge.Y) {
 				continue;
 #if 0
 				printf("Decoration at (%d %d %d) cut off\n", x, y, z);
@@ -156,7 +156,7 @@ size_t Decoration::placeDeco(Mapgen *mg, u32 blockseed, v3s16 nmin, v3s16 nmax)
 			}
 
 			if (mg->biomemap) {
-				std::set<u8>::iterator iter;
+				UNORDERED_SET<u8>::iterator iter;
 
 				if (!biomes.empty()) {
 					iter = biomes.find(mg->biomemap[mapindex]);
@@ -370,5 +370,9 @@ size_t DecoSchematic::generate(MMVManip *vm, PcgRandom *pr, v3s16 p)
 
 int DecoSchematic::getHeight()
 {
-	return schematic->size.Y;
+	// Account for a schematic being sunk into the ground by flag.
+	// When placed normally account for how a schematic is placed
+	// sunk 1 node into the ground.
+	return (flags & DECO_PLACE_CENTER_Y) ?
+		(schematic->size.Y - 1) / 2 : schematic->size.Y - 1;
 }

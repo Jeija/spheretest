@@ -249,8 +249,8 @@ bool ScriptApiSecurity::isSecure(lua_State *L)
 
 #define CHECK_FILE_ERR(ret, fp) \
 	if (ret) { \
-		if (fp) std::fclose(fp); \
 		lua_pushfstring(L, "%s: %s", path, strerror(errno)); \
+		if (fp) std::fclose(fp); \
 		return false; \
 	}
 
@@ -285,32 +285,40 @@ bool ScriptApiSecurity::safeLoadFile(lua_State *L, const char *path)
 
 	if (c == LUA_SIGNATURE[0]) {
 		lua_pushliteral(L, "Bytecode prohibited when mod security is enabled.");
+		std::fclose(fp);
+		if (path) {
+			delete [] chunk_name;
+		}
 		return false;
 	}
 
 	// Read the file
 	int ret = std::fseek(fp, 0, SEEK_END);
 	CHECK_FILE_ERR(ret, fp);
-	if (ret) {
-		std::fclose(fp);
-		lua_pushfstring(L, "%s: %s", path, strerror(errno));
-		return false;
-	}
+
 	size_t size = std::ftell(fp) - start;
 	char *code = new char[size];
 	ret = std::fseek(fp, start, SEEK_SET);
-	CHECK_FILE_ERR(ret, fp);
 	if (ret) {
-		std::fclose(fp);
 		lua_pushfstring(L, "%s: %s", path, strerror(errno));
+		std::fclose(fp);
+		delete [] code;
+		if (path) {
+			delete [] chunk_name;
+		}
 		return false;
 	}
+
 	size_t num_read = std::fread(code, 1, size, fp);
 	if (path) {
 		std::fclose(fp);
 	}
 	if (num_read != size) {
 		lua_pushliteral(L, "Error reading file to load.");
+		delete [] code;
+		if (path) {
+			delete [] chunk_name;
+		}
 		return false;
 	}
 

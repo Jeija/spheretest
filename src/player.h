@@ -46,7 +46,10 @@ struct PlayerControl
 		RMB = false;
 		pitch = 0;
 		yaw = 0;
+		sidew_move_joystick_axis = .0f;
+		forw_move_joystick_axis = .0f;
 	}
+
 	PlayerControl(
 		bool a_up,
 		bool a_down,
@@ -55,10 +58,13 @@ struct PlayerControl
 		bool a_jump,
 		bool a_aux1,
 		bool a_sneak,
+		bool a_zoom,
 		bool a_LMB,
 		bool a_RMB,
 		float a_pitch,
-		float a_yaw
+		float a_yaw,
+		float a_sidew_move_joystick_axis,
+		float a_forw_move_joystick_axis
 	)
 	{
 		up = a_up;
@@ -68,10 +74,13 @@ struct PlayerControl
 		jump = a_jump;
 		aux1 = a_aux1;
 		sneak = a_sneak;
+		zoom = a_zoom;
 		LMB = a_LMB;
 		RMB = a_RMB;
 		pitch = a_pitch;
 		yaw = a_yaw;
+		sidew_move_joystick_axis = a_sidew_move_joystick_axis;
+		forw_move_joystick_axis = a_forw_move_joystick_axis;
 	}
 	bool up;
 	bool down;
@@ -80,10 +89,13 @@ struct PlayerControl
 	bool jump;
 	bool aux1;
 	bool sneak;
+	bool zoom;
 	bool LMB;
 	bool RMB;
 	float pitch;
 	float yaw;
+	float sidew_move_joystick_axis;
+	float forw_move_joystick_axis;
 };
 
 class Map;
@@ -180,14 +192,26 @@ public:
 		m_breath = breath;
 	}
 
-	f32 getRadPitch()
+	// Deprecated
+	f32 getRadPitchDep()
 	{
 		return -1.0 * m_pitch * core::DEGTORAD;
 	}
 
-	f32 getRadYaw()
+	// Deprecated
+	f32 getRadYawDep()
 	{
 		return (m_yaw + 90.) * core::DEGTORAD;
+	}
+
+	f32 getRadPitch()
+	{
+		return m_pitch * core::DEGTORAD;
+	}
+
+	f32 getRadYaw()
+	{
+		return m_yaw * core::DEGTORAD;
 	}
 
 	const char *getName() const
