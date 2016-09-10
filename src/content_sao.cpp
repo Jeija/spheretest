@@ -284,6 +284,33 @@ void LuaEntitySAO::step(float dtime, bool send_recommended)
 			m_velocity += dtime * m_acceleration;
 		}
 
+		/*
+			Handle Planet
+		*/
+		if (g_settings->getBool("planet_enable")) {
+			int planet_radius = g_settings->getU16("planet_radius") * MAP_BLOCKSIZE * BS;
+			int planet_circumference = ceil(g_settings->getU16("planet_radius") * M_PI) * 2 * MAP_BLOCKSIZE * BS;
+
+			// Teleport items to other side of planet at planet edges
+			if (m_base_position.X > planet_circumference / 2 - 0.5 * BS)
+				m_base_position.X = -(float)planet_circumference / 2 - 0.5 * BS;
+			if (m_base_position.X < -planet_circumference / 2 - 0.5 * BS)
+				m_base_position.X = (float)planet_circumference / 2 - 0.5 * BS;
+			if (m_base_position.Z > planet_circumference / 2 - 0.5 * BS)
+				m_base_position.Z = -(float)planet_circumference / 2 - 0.5 * BS;
+			if (m_base_position.Z < -planet_circumference / 2 - 0.5 * BS)
+				m_base_position.Z = (float)planet_circumference / 2 - 0.5 * BS;
+
+			// Make objects fall through the planet center
+			if (g_settings->getBool("planet_fallthrough_enable")) {
+				if (m_base_position.Y < -planet_radius) {
+					m_base_position.Y = -planet_radius + BS;
+					m_base_position.X += planet_circumference / 2. * (m_base_position.X < 0 ? 1 : -1);
+					m_velocity.Y *= -1;
+				}
+			}
+		}
+
 		if((m_prop.automatic_face_movement_dir) &&
 				(fabs(m_velocity.Z) > 0.001 || fabs(m_velocity.X) > 0.001))
 		{

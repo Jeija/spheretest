@@ -126,7 +126,7 @@ void set_default_settings(Settings *settings)
 	settings->setDefault("cinematic_camera_smoothing", "0.7");
 	settings->setDefault("fast_move", "false");
 	settings->setDefault("invert_mouse", "false");
-	settings->setDefault("enable_clouds", "true");
+	settings->setDefault("enable_clouds", "false");
 	settings->setDefault("screenshot_path", ".");
 	settings->setDefault("screenshot_format", "png");
 	settings->setDefault("screenshot_quality", "0");
