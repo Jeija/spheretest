@@ -196,12 +196,14 @@ WieldMeshSceneNode::WieldMeshSceneNode(
 		scene::ISceneNode *parent,
 		scene::ISceneManager *mgr,
 		s32 id,
-		bool lighting
+		bool lighting,
+		bool wield_in_hand
 ):
 	scene::ISceneNode(parent, mgr, id),
 	m_meshnode(NULL),
 	m_material_type(video::EMT_TRANSPARENT_ALPHA_CHANNEL_REF),
 	m_lighting(lighting),
+	m_wield_in_hand(wield_in_hand),
 	m_bounding_box(0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 {
 	m_enable_shaders = g_settings->getBool("enable_shaders");
@@ -315,7 +317,7 @@ void WieldMeshSceneNode::setItem(const ItemStack &item, IGameDef *gamedef)
 	content_t id = ndef->getId(def.name);
 
 	if (m_enable_shaders) {
-		u32 shader_id = shdrsrc->getShader("wielded_shader", TILE_MATERIAL_BASIC, NDT_NORMAL);
+		u32 shader_id = shdrsrc->getShader(m_wield_in_hand ? "wielded_hand_shader" : "wielded_shader", TILE_MATERIAL_BASIC, NDT_NORMAL);
 		m_material_type = shdrsrc->getShaderInfo(shader_id).material;
 	}
 

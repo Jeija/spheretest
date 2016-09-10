@@ -71,7 +71,7 @@ void main(void)
 	gl_Position = mWorldViewProj * mInvWorld * pos;
 
 	vPosition = gl_Position.xyz;
-	worldPosition = (mWorld * gl_Vertex).xyz * BS;
+	worldPosition = (mWorld * gl_Vertex).xyz;
 
 	vec3 sunPosition = vec3 (0.0, eyePosition.y * BS + 900.0, 0.0);
 
