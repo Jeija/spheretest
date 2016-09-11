@@ -1057,7 +1057,39 @@ void GenericCAO::updateNodePos()
 
 	if (node) {
 		v3s16 camera_offset = m_env->getCameraOffset();
-		node->setPosition(pos_translator.vect_show - intToFloat(camera_offset, BS));
+
+		/*
+		 * Planet: Since the planet is actually just a flat map that wraps around
+		 * a seemingly spherical object, there are 9 possible minimal distances to
+		 * the same object, because the end of the map on one side is the beginning
+		 * of the map on the other side again. Find the minimal distance from the player
+		 * to this object.
+		 */
+		if (!g_settings->getBool("planet_enable")) {
+			node->setPosition(pos_translator.vect_show - intToFloat(camera_offset, BS));
+		} else {
+			v3s16 cam_pos_nodes = floatToInt(m_gamedef->getCamera()->getPosition(), BS);
+
+			// Round planet circumference up to even number of mapblocks, in nodes
+			int planet_circumference = ceil(g_settings->getU16("planet_radius") * M_PI) * 2 * MAP_BLOCKSIZE;
+
+			float mindist = (cam_pos_nodes - floatToInt(m_position, BS)).getLength();
+			int offset_minimal_x = 0, offset_minimal_z = 0;
+			for (int wrapx = -1; wrapx <= 1; ++wrapx)
+			for (int wrapz = -1; wrapz <= 1; ++wrapz) {
+				float distx = cam_pos_nodes.X - (m_position.X / BS + wrapx * planet_circumference);
+				float distz = cam_pos_nodes.Z - (m_position.Z / BS + wrapz * planet_circumference);
+				float dist = sqrt(distx * distx + distz * distz);
+
+				if (dist < mindist) {
+					mindist = dist;
+					offset_minimal_x = wrapx * planet_circumference;
+					offset_minimal_z = wrapz * planet_circumference;
+				}
+			}
+			node->setPosition(pos_translator.vect_show - intToFloat(camera_offset, BS) + v3f(offset_minimal_x * BS, 0, offset_minimal_z * BS));
+		}
+
 		if (node != m_spritenode) { // rotate if not a sprite
 			v3f rot = node->getRotation();
 			rot.Y = -m_yaw;
