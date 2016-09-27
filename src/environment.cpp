@@ -2536,11 +2536,8 @@ void ClientEnvironment::step(float dtime)
 
 				// When stretching out the planet so that blocks keep their aspect ratio,
 				// the height will actually be the magnitude of the complex exponential function
-				// We also have to divide accelerations by blockwidth in order to account for the fact
-				// that block heights get bigger / smaller depending on where the player is above the planet core
 				if (g_settings->getBool("planet_keep_scale"))
 					height = planet_radius * exp(lplayer->getPosition().Y / planet_radius);
-				float blockwidth = height / planet_radius;
 
 				if (g_settings->getBool("planet_enable") && g_settings->getBool("planet_realistic_gravity")) {
 					if (lplayer->getPosition().Y < 0)
@@ -2551,13 +2548,13 @@ void ClientEnvironment::step(float dtime)
 
 
 				if(lplayer->in_liquid == false)
-					speed.Y -= gravity_coeff * lplayer->movement_gravity * lplayer->physics_override_gravity * dtime_part * 2 / blockwidth;
+					speed.Y -= gravity_coeff * lplayer->movement_gravity * lplayer->physics_override_gravity * dtime_part * 2;
 
 
 				// Planet: Apply centrifugal force
 				// a_z = v^2 / height with v = (horizontal speed) * (block width at that height)
 				if (g_settings->getBool("planet_enable") && g_settings->getBool("planet_centrifugal_enable") && lplayer->in_liquid == false)
-					speed.Y += (speed.X * speed.X + speed.Z * speed.Z) * blockwidth * blockwidth / height * dtime_part * 2 / blockwidth;
+					speed.Y += (speed.X * speed.X + speed.Z * speed.Z) / height * dtime_part * 2;
 
 				// Liquid floating / sinking
 				if(lplayer->in_liquid && !lplayer->swimming_vertical)
