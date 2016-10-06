@@ -263,7 +263,17 @@ Textures can be grouped together by enclosing them in `(` and `)`.
 Example: `cobble.png^(thing1.png^thing2.png)`
 
 A texture for `thing1.png^thing2.png` is created and the resulting
-texture is overlaid over `cobble.png`.
+texture is overlaid on top of `cobble.png`.
+
+### Escaping
+Modifiers that accept texture names (e.g. `[combine`) accept escaping to allow
+passing complex texture names as arguments. Escaping is done with backslash and
+is required for `^` and `:`.
+
+Example: `cobble.png^[lowpart:50:color.png\^[mask\:trans.png`
+
+The lower 50 percent of `color.png^[mask:trans.png` are overlaid
+on top of `cobble.png`.
 
 ### Advanced texture modifiers
 
@@ -308,6 +318,15 @@ Example:
 
     default_sandstone.png^[opacity:127
 
+#### `[invert:<mode>`
+Inverts the given channels of the base image.
+Mode may contain the characters "r", "g", "b", "a".
+Only the channels that are mentioned in the mode string will be inverted.
+
+Example:
+
+	default_apple.png^[invert:rgb
+
 #### `[brighten`
 Brightens the texture.
 
@@ -351,7 +370,7 @@ Example:
     default_stone.png^[transformFXR90
 
 #### `[inventorycube{<top>{<left>{<right>`
-`^` is replaced by `&` in texture names.
+Escaping does not apply here and `^` is replaced by `&` in texture names instead.
 
 Create an inventory cube texture using the side textures.
 
@@ -1449,6 +1468,15 @@ examples.
 * Define the size of the menu in inventory slots
 * `fixed_size`: `true`/`false` (optional)
 * deprecated: `invsize[<W>,<H>;]`
+
+#### `container[<X>,<Y>]`
+* Start of a container block, moves all physical elements in the container by (X, Y)
+* Must have matching container_end
+* Containers can be nested, in which case the offsets are added
+  (child containers are relative to parent containers)
+
+#### `container_end[]`
+* End of a container, following elements are no longer relative to this container
 
 #### `list[<inventory location>;<list name>;<X>,<Y>;<W>,<H>;]`
 * Show an inventory list
@@ -2594,13 +2622,17 @@ These functions return the leftover itemstack.
        the creative mode setting, and checks for "sneak" to set the `invert_wall`
        parameter.
 
-* `minetest.forceload_block(pos)`
+* `minetest.forceload_block(pos[, transient])`
     * forceloads the position `pos`.
     * returns `true` if area could be forceloaded
-    * Please note that forceloaded areas are saved when the server restarts.
+    * If `transient` is `false` or absent, the forceload will be persistent
+      (saved between server runs). If `true`, the forceload will be transient
+      (not saved between server runs).
 
-* `minetest.forceload_free_block(pos)`
+* `minetest.forceload_free_block(pos[, transient])`
     * stops forceloading the position `pos`
+    * If `transient` is `false` or absent, frees a persistent forceload.
+      If `true`, frees a transient forceload.
 
 * `minetest.request_insecure_environment()`: returns an environment containing
   insecure functions if the calling mod has been listed as trusted in the
@@ -2886,6 +2918,7 @@ chosen for you.
 #### Methods
 * `get_area(id, include_borders, include_data)`: returns the area with the id `id`.
   (optional) Boolean values `include_borders` and `include_data` control what's copied.
+  Returns nil if specified area id does not exist.
 * `get_areas_for_pos(pos, include_borders, include_data)`: returns all areas that contain
   the position `pos`. (optional) Boolean values `include_borders` and `include_data` control
   what's copied.
@@ -3328,13 +3361,15 @@ Registered entities
     * It has the member `.object`, which is an `ObjectRef` pointing to the object
     * The original prototype stuff is visible directly via a metatable
 * Callbacks:
-    * `on_activate(self, staticdata)`
+    * `on_activate(self, staticdata, dtime_s)`
         * Called when the object is instantiated.
+        * `dtime_s` is the time passed since the object was unloaded, which can
+          be used for updating the entity state.
     * `on_step(self, dtime)`
         * Called on every server tick, after movement and collision processing.
           `dtime` is usually 0.1 seconds, as per the `dedicated_server_step` setting
           `in minetest.conf`.
-    * `on_punch(self, puncher, time_from_last_punch, tool_capabilities, dir`
+    * `on_punch(self, puncher, time_from_last_punch, tool_capabilities, dir)`
         * Called when somebody punches the object.
         * Note that you probably want to handle most punches using the
           automatic armor group system.
@@ -3462,7 +3497,7 @@ Definition tables
 
         on_activate = function(self, staticdata, dtime_s),
         on_step = function(self, dtime),
-        on_punch = function(self, hitter),
+        on_punch = function(self, puncher, time_from_last_punch, tool_capabilities, dir),
         on_rightclick = function(self, clicker),
         get_staticdata = function(self),
     --  ^ Called sometimes; the string returned is passed to on_activate when
@@ -3642,7 +3677,10 @@ Definition tables
         ^ Don't forget to use "leveled" type nodebox. ]]
         liquid_range = 8, -- number of flowing nodes around source (max. 8)
         drowning = 0, -- Player will take this amount of damage if no bubbles are left
-        light_source = 0, -- Amount of light emitted by node
+        light_source = 0, --[[
+        ^ Amount of light emitted by node.
+        ^ To set the maximum (currently 14), use the value 'minetest.LIGHT_MAX'.
+        ^ A value outside the range 0 to minetest.LIGHT_MAX causes undefined behavior.]]
         damage_per_second = 0, -- If player is inside node, this damage is caused
         node_box = {type="regular"}, -- See "Node boxes"
         connects_to = nodenames, --[[
@@ -3896,7 +3934,7 @@ The Biome API is still in an experimental phase and subject to change.
     {
         deco_type = "simple", -- See "Decoration types"
         place_on = "default:dirt_with_grass",
-    --  ^ Node that decoration can be placed on
+    --  ^ Node (or list of nodes) that the decoration can be placed on
         sidelen = 8,
     --  ^ Size of divisions made in the chunk being generated.
     --  ^ If the chunk size is not evenly divisible by sidelen, sidelen is made equal to the chunk size.
@@ -3915,6 +3953,13 @@ The Biome API is still in an experimental phase and subject to change.
     -- ^ Minimum and maximum `y` positions these decorations can be generated at.
     -- ^ This parameter refers to the `y` position of the decoration base, so
     --   the actual maximum height would be `height_max + size.Y`.
+        spawn_by = "default:water",
+    --  ^ Node (or list of nodes) that the decoration only spawns next to.
+    --  ^ Checks two horizontal planes of neighbouring nodes (including diagonal neighbours),
+    --  ^ one plane at Y = surface and one plane at Y = surface = + 1.
+        num_spawn_by = 1,
+    --  ^ Number of spawn_by nodes that must be surrounding the decoration position to occur.
+    --  ^ If absent or -1, decorations occur next to any nodes.
         flags = "liquid_surface, force_placement",
     --  ^ Flags for all decoration types.
     --  ^ "liquid_surface": Instead of placement on the highest solid surface
@@ -3932,13 +3977,6 @@ The Biome API is still in an experimental phase and subject to change.
         height_max = 0,
     --      ^ Number of nodes the decoration can be at maximum.
     --  ^ If absent, the parameter 'height' is used as a constant.
-        spawn_by = "default:water",
-    --  ^ Node that the decoration only spawns next to.
-    --  ^ The neighbours checked are the 8 nodes horizontally surrounding the lowest node of the
-    --  ^ decoration, and the 8 nodes horizontally surrounding the ground node below the decoration.
-        num_spawn_by = 1,
-    --  ^ Number of spawn_by nodes that must be surrounding the decoration position to occur.
-    --  ^ If absent or -1, decorations occur next to any nodes.
 
         ----- Schematic-type parameters
         schematic = "foobar.mts",

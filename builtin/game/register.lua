@@ -127,6 +127,11 @@ function core.register_item(name, itemdef)
 				fixed = {-1/8, -1/2, -1/8, 1/8, 1/2, 1/8},
 			}
 		end
+		if itemdef.light_source and itemdef.light_source > core.LIGHT_MAX then
+			itemdef.light_source = core.LIGHT_MAX
+			core.log("warning", "Node 'light_source' value exceeds maximum," ..
+				" limiting to maximum: " ..name)
+		end
 		setmetatable(itemdef, {__index = core.nodedef_default})
 		core.registered_nodes[itemdef.name] = itemdef
 	elseif itemdef.type == "craft" then

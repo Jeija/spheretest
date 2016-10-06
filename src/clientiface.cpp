@@ -617,11 +617,8 @@ ClientInterface::~ClientInterface()
 	{
 		MutexAutoLock clientslock(m_clients_mutex);
 
-		for(std::map<u16, RemoteClient*>::iterator
-			i = m_clients.begin();
-			i != m_clients.end(); ++i)
-		{
-
+		for (UNORDERED_MAP<u16, RemoteClient*>::iterator i = m_clients.begin();
+			i != m_clients.end(); ++i) {
 			// Delete client
 			delete i->second;
 		}
@@ -633,10 +630,8 @@ std::vector<u16> ClientInterface::getClientIDs(ClientState min_state)
 	std::vector<u16> reply;
 	MutexAutoLock clientslock(m_clients_mutex);
 
-	for(std::map<u16, RemoteClient*>::iterator
-		i = m_clients.begin();
-		i != m_clients.end(); ++i)
-	{
+	for(UNORDERED_MAP<u16, RemoteClient*>::iterator i = m_clients.begin();
+		i != m_clients.end(); ++i) {
 		if (i->second->getState() >= min_state)
 			reply.push_back(i->second->peer_id);
 	}
@@ -703,8 +698,7 @@ void ClientInterface::sendToAll(u16 channelnum,
 		NetworkPacket* pkt, bool reliable)
 {
 	MutexAutoLock clientslock(m_clients_mutex);
-	for(std::map<u16, RemoteClient*>::iterator
-		i = m_clients.begin();
+	for(UNORDERED_MAP<u16, RemoteClient*>::iterator i = m_clients.begin();
 		i != m_clients.end(); ++i) {
 		RemoteClient *client = i->second;
 
@@ -717,11 +711,10 @@ void ClientInterface::sendToAll(u16 channelnum,
 RemoteClient* ClientInterface::getClientNoEx(u16 peer_id, ClientState state_min)
 {
 	MutexAutoLock clientslock(m_clients_mutex);
-	std::map<u16, RemoteClient*>::iterator n;
-	n = m_clients.find(peer_id);
+	UNORDERED_MAP<u16, RemoteClient*>::iterator n = m_clients.find(peer_id);
 	// The client may not exist; clients are immediately removed if their
 	// access is denied, and this event occurs later then.
-	if(n == m_clients.end())
+	if (n == m_clients.end())
 		return NULL;
 
 	if (n->second->getState() >= state_min)
@@ -732,11 +725,10 @@ RemoteClient* ClientInterface::getClientNoEx(u16 peer_id, ClientState state_min)
 
 RemoteClient* ClientInterface::lockedGetClientNoEx(u16 peer_id, ClientState state_min)
 {
-	std::map<u16, RemoteClient*>::iterator n;
-	n = m_clients.find(peer_id);
+	UNORDERED_MAP<u16, RemoteClient*>::iterator n = m_clients.find(peer_id);
 	// The client may not exist; clients are immediately removed if their
 	// access is denied, and this event occurs later then.
-	if(n == m_clients.end())
+	if (n == m_clients.end())
 		return NULL;
 
 	if (n->second->getState() >= state_min)
@@ -748,11 +740,10 @@ RemoteClient* ClientInterface::lockedGetClientNoEx(u16 peer_id, ClientState stat
 ClientState ClientInterface::getClientState(u16 peer_id)
 {
 	MutexAutoLock clientslock(m_clients_mutex);
-	std::map<u16, RemoteClient*>::iterator n;
-	n = m_clients.find(peer_id);
+	UNORDERED_MAP<u16, RemoteClient*>::iterator n = m_clients.find(peer_id);
 	// The client may not exist; clients are immediately removed if their
 	// access is denied, and this event occurs later then.
-	if(n == m_clients.end())
+	if (n == m_clients.end())
 		return CS_Invalid;
 
 	return n->second->getState();
@@ -761,11 +752,10 @@ ClientState ClientInterface::getClientState(u16 peer_id)
 void ClientInterface::setPlayerName(u16 peer_id,std::string name)
 {
 	MutexAutoLock clientslock(m_clients_mutex);
-	std::map<u16, RemoteClient*>::iterator n;
-	n = m_clients.find(peer_id);
+	UNORDERED_MAP<u16, RemoteClient*>::iterator n = m_clients.find(peer_id);
 	// The client may not exist; clients are immediately removed if their
 	// access is denied, and this event occurs later then.
-	if(n != m_clients.end())
+	if (n != m_clients.end())
 		n->second->setName(name);
 }
 
@@ -774,11 +764,10 @@ void ClientInterface::DeleteClient(u16 peer_id)
 	MutexAutoLock conlock(m_clients_mutex);
 
 	// Error check
-	std::map<u16, RemoteClient*>::iterator n;
-	n = m_clients.find(peer_id);
+	UNORDERED_MAP<u16, RemoteClient*>::iterator n = m_clients.find(peer_id);
 	// The client may not exist; clients are immediately removed if their
 	// access is denied, and this event occurs later then.
-	if(n == m_clients.end())
+	if (n == m_clients.end())
 		return;
 
 	/*
@@ -809,10 +798,9 @@ void ClientInterface::CreateClient(u16 peer_id)
 	MutexAutoLock conlock(m_clients_mutex);
 
 	// Error check
-	std::map<u16, RemoteClient*>::iterator n;
-	n = m_clients.find(peer_id);
+	UNORDERED_MAP<u16, RemoteClient*>::iterator n = m_clients.find(peer_id);
 	// The client shouldn't already exist
-	if(n != m_clients.end()) return;
+	if (n != m_clients.end()) return;
 
 	// Create client
 	RemoteClient *client = new RemoteClient();
@@ -826,8 +814,7 @@ void ClientInterface::event(u16 peer_id, ClientStateEvent event)
 		MutexAutoLock clientlock(m_clients_mutex);
 
 		// Error check
-		std::map<u16, RemoteClient*>::iterator n;
-		n = m_clients.find(peer_id);
+		UNORDERED_MAP<u16, RemoteClient*>::iterator n = m_clients.find(peer_id);
 
 		// No client to deliver event
 		if (n == m_clients.end())
@@ -848,8 +835,7 @@ u16 ClientInterface::getProtocolVersion(u16 peer_id)
 	MutexAutoLock conlock(m_clients_mutex);
 
 	// Error check
-	std::map<u16, RemoteClient*>::iterator n;
-	n = m_clients.find(peer_id);
+	UNORDERED_MAP<u16, RemoteClient*>::iterator n = m_clients.find(peer_id);
 
 	// No client to get version
 	if (n == m_clients.end())
@@ -863,8 +849,7 @@ void ClientInterface::setClientVersion(u16 peer_id, u8 major, u8 minor, u8 patch
 	MutexAutoLock conlock(m_clients_mutex);
 
 	// Error check
-	std::map<u16, RemoteClient*>::iterator n;
-	n = m_clients.find(peer_id);
+	UNORDERED_MAP<u16, RemoteClient*>::iterator n = m_clients.find(peer_id);
 
 	// No client to set versions
 	if (n == m_clients.end())

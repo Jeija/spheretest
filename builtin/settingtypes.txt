@@ -561,13 +561,13 @@ freetype (Freetype fonts) bool true
 #    Path to TrueTypeFont or bitmap.
 font_path (Font path) path fonts/liberationsans.ttf
 
-font_size (Font size) int 15
+font_size (Font size) int 16
 
 #    Font shadow offset, if 0 then shadow will not be drawn.
 font_shadow (Font shadow) int 1
 
 #    Font shadow alpha (opaqueness, between 0 and 255).
-font_shadow_alpha (Font shadow alpha) int 128 0 255
+font_shadow_alpha (Font shadow alpha) int 127 0 255
 
 mono_font_path (Monospace font path) path fonts/liberationmono.ttf
 
@@ -773,6 +773,15 @@ time_speed (Time speed) int 72
 
 #    Interval of saving important changes in the world, stated in seconds.
 server_map_save_interval (Map save interval) float 5.3
+
+#    Set the maximum character length of a chat message sent by clients.
+# chat_message_max_size int 500
+
+#    Limit a single player to send X messages per 10 seconds.
+# chat_message_limit_per_10sec float 10.0
+
+#    Kick player if send more than X messages per 10 seconds.
+# chat_message_limit_trigger_kick int 50
 
 [**Physics]
 
