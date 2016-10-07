@@ -1035,7 +1035,7 @@ MapBlockMesh::MapBlockMesh(MeshMakeData *data, v3s16 camera_offset):
 	m_enable_shaders = data->m_use_shaders;
 	m_use_tangent_vertices = data->m_use_tangent_vertices;
 	m_enable_vbo = g_settings->getBool("enable_vbo");
-	
+
 	if (g_settings->getBool("enable_minimap")) {
 		m_minimap_mapblock = new MinimapMapblock;
 		m_minimap_mapblock->getMinimapNodes(
@@ -1300,10 +1300,8 @@ bool MapBlockMesh::animate(bool faraway, float time, int crack, u32 daynight_rat
 	// Cracks
 	if(crack != m_last_crack)
 	{
-		for(std::map<u32, std::string>::iterator
-				i = m_crack_materials.begin();
-				i != m_crack_materials.end(); ++i)
-		{
+		for (UNORDERED_MAP<u32, std::string>::iterator i = m_crack_materials.begin();
+				i != m_crack_materials.end(); ++i) {
 			scene::IMeshBuffer *buf = m_mesh->getMeshBuffer(i->first);
 			std::string basename = i->second;
 
@@ -1317,9 +1315,9 @@ bool MapBlockMesh::animate(bool faraway, float time, int crack, u32 daynight_rat
 
 			// If the current material is also animated,
 			// update animation info
-			std::map<u32, TileSpec>::iterator anim_iter =
-				m_animation_tiles.find(i->first);
-			if(anim_iter != m_animation_tiles.end()){
+			UNORDERED_MAP<u32, TileSpec>::iterator anim_iter =
+					m_animation_tiles.find(i->first);
+			if (anim_iter != m_animation_tiles.end()){
 				TileSpec &tile = anim_iter->second;
 				tile.texture = new_texture;
 				tile.texture_id = new_texture_id;
@@ -1332,10 +1330,8 @@ bool MapBlockMesh::animate(bool faraway, float time, int crack, u32 daynight_rat
 	}
 
 	// Texture animation
-	for(std::map<u32, TileSpec>::iterator
-			i = m_animation_tiles.begin();
-			i != m_animation_tiles.end(); ++i)
-	{
+	for (UNORDERED_MAP<u32, TileSpec>::iterator i = m_animation_tiles.begin();
+			i != m_animation_tiles.end(); ++i) {
 		const TileSpec &tile = i->second;
 		// Figure out current frame
 		int frameoffset = m_animation_frame_offsets[i->first];
@@ -1454,7 +1450,7 @@ void MeshCollector::append(const TileSpec &tile,
 				vertices[i].Color, vertices[i].TCoords);
 			p->vertices.push_back(vert);
 		}
-	} 
+	}
 
 	for (u32 i = 0; i < numIndices; i++) {
 		u32 j = indices[i] + vertex_count;
@@ -1510,7 +1506,7 @@ void MeshCollector::append(const TileSpec &tile,
 				vertices[i].Normal, c, vertices[i].TCoords);
 			p->vertices.push_back(vert);
 		}
-	} 
+	}
 
 	for (u32 i = 0; i < numIndices; i++) {
 		u32 j = indices[i] + vertex_count;
