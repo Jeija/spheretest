@@ -13,6 +13,7 @@ movement_gravity = 10
 enable_clouds = 0
 active_block_range = 4
 active_object_send_range_blocks = 4
+viewing_range = 400
 
 You can tweak these settings and see how they affect the planet's appearance and behaviour.
 In the game, create a new world with Mapgen "flat". The planet edges are very glitchy, so anything other than "flat" won't look good.
