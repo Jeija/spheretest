@@ -277,7 +277,7 @@ void ClientMap::updateDrawList(video::IVideoDriver* driver)
 				if (block->getPos().Y < -g_settings->getU16("planet_radius"))
 					continue;
 
-				if (mindist > planet_circumference / 4)
+				if (mindist > planet_circumference / 3)
 					continue;
 			}
 

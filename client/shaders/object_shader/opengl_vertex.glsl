@@ -42,11 +42,11 @@ void main(void)
 #ifdef PLANET_KEEP_SCALE
 	// Complex approach
 	vec2 planedir = normalize(vec2(pos.x - camPos.x, pos.z - camPos.z));
-	cplx plane = cplx_new(pos.y - camPos.y, sqrt((pos.x - camPos.x) * (pos.x - camPos.x) + (pos.z - camPos.z) * (pos.z - camPos.z)));
+	cplx plane = cplx_new(-pos.y + camPos.y, sqrt((pos.x - camPos.x) * (pos.x - camPos.x) + (pos.z - camPos.z) * (pos.z - camPos.z)));
 	cplx circle = rp * cplx_exp(cplx_scale(plane, 1.0 / rp)) - cplx_new(rp, 0);
 	pos.x = cplx_im(circle) * planedir.x + camPos.x;
 	pos.z = cplx_im(circle) * planedir.y + camPos.z;
-	pos.y = cplx_re(circle) + camPos.y;
+	pos.y = -cplx_re(circle) + camPos.y;
 #else
 	// Naive approach
 	vec2 planedir = normalize(vec2(pos.x - camPos.x, pos.z - camPos.z));
